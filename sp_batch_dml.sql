@@ -308,13 +308,6 @@ CREATE TABLE  `t_move_data_init` (
 
 INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
    VALUES (0,0,'panda_rcs','match_event_info',NULL,NULL,'event_time','event_time<{}',NULL,30,10000000,0.01);
-INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
-   VALUES (0,0,'panda_rcs','rcs_monitor_data',NULL,NULL,'A','create_time < date_format(NOW()-INTERVAL 15 DAY,"%Y-%m-%d 00:00:00")',NULL,15,10000,0.01);
-INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
-   VALUES (0,0,'panda_rcs','rcs_monitor_mq_info',NULL,NULL,'A','crt_time < date_format(NOW()-INTERVAL 30 DAY,"%Y-%m-%d 00:00:00")',NULL,30,10000,0.01);
-
-INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
-   VALUES (0,0,'panda_rcs','rcs_lock',NULL,NULL,'A','crt_time < date_format(NOW()-INTERVAL 15 DAY,"%Y-%m-%d 00:00:00")',NULL,15,10000,0.01);
 INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,i_flist,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
    VALUES (1,0,'panda_rcs','t_order_detail_ext','panda_rcs','t_order_detail_ext_bak','NAL','A','max_accept_time<{}',NULL,7,10000,0.01);
 
@@ -322,13 +315,6 @@ INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,sour
    VALUES (0,1,'panda_rcs','rcs_match_collection',NULL,NULL,'A','match_id in (select id from panda_rcs.standard_match_info where match_status in(3, 4)) and create_time < date_format(NOW()-INTERVAL 7 DAY,"%Y-%m-%d 00:00:00")',NULL,7,50000,0.01);
 INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,i_flist,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
    VALUES (1,1,'panda_rcs','rcs_order_basketball_matrix','panda_rcs','rcs_order_basketball_matrix_bak','NAL','A','match_id in(select id from panda_rcs.standard_match_info where match_status in(3, 4) and begin_time<{})',NULL,30,10000,0.01);
-INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,i_flist,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
-   VALUES (1,1,'panda_rcs','rcs_predict_basketball_matrix','panda_rcs','rcs_predict_basketball_matrix_bak','NAL','A','match_id in(select id from panda_rcs.standard_match_info where match_status in(3, 4) and begin_time<{})',NULL,30,10000,0.01);
-INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,i_flist,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
-   VALUES (1,1,'panda_rcs','rcs_predict_forecast','panda_rcs','rcs_predict_forecast_bak','NAL','A','match_id in(select id from panda_rcs.standard_match_info where match_status in(3, 4) and begin_time<{})',NULL,30,10000,0.01);
-INSERT INTO my_tools.t_move_data_init(is_bak,is_add_condition,source_schema,source_table,target_schema,target_table,i_flist,field_name,where_condition,sub_qry,where_days,batch_cnt,sleep_sec)
-   VALUES (1,1,'panda_rcs','rcs_predict_forecast_play','panda_rcs','rcs_predict_forecast_play_bak','NAL','A','match_id in(select id from panda_rcs.standard_match_info where match_status in(3, 4) and begin_time<{})',NULL,30,10000,0.01);
-
 
 DELIMITER $$
 drop procedure if exists sp_move_data$$
