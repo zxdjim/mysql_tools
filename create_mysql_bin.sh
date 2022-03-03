@@ -57,27 +57,31 @@ socket	= /data/mysql_$2/mysql.sock
 [mysqld]
 user	= mysql
 port	= $2
-mysqlx_port = ${2}
+mysqlx_port = 1${2}
 basedir	= /usr/local/mysql
 datadir	= /data/mysql_$2
 socket	= /data/mysql_$2/mysql.sock
 pid-file = /data/mysql_$2/mysqldb.pid
 character-set-server = utf8mb4
-#字符区分大小写
+
 collation-server = utf8mb4_0900_as_cs
+#collation-server = utf8mb4_bin
 skip_name_resolve = 1
 #
 default-authentication-plugin=mysql_native_password
-#表名不区分大小写
+#是否不区分大小写(0:否 1:是)
 lower-case-table-names = 1
 autocommit = 1
 group_concat_max_len = 10240
+default-time-zone='+8:00'
 
 range_optimizer_max_mem_size=0
 innodb_adaptive_hash_index=0
-table_open_cache=25000
 innodb_status_output=0
 information_schema_stats_expiry=0
+event_scheduler=1
+## 不限制mysqld在任意目录的导入导出
+secure_file_priv=''
 #############主从复制
 sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'
 gtid-mode=on
@@ -86,14 +90,15 @@ log-slave-updates=on
 slave-parallel-type=LOGICAL_CLOCK
 slave-parallel-workers=8
 log_bin_trust_function_creators=1
-###################
+###################关闭binlog
+#skip-log-bin
 
 open_files_limit    = 65535
 back_log = 1024
 max_connections = 20000
 max_connect_errors = 1000000
-#table_open_cache = 1024
-table_definition_cache = 1024
+table_open_cache = 25000
+table_definition_cache = 25000
 table_open_cache_instances = 64
 thread_stack = 512K
 external-locking = FALSE
@@ -112,7 +117,7 @@ log-error = /data/mysql_$2/error.log
 long_query_time = 2
 log_queries_not_using_indexes =1
 log_throttle_queries_not_using_indexes = 60
-min_examined_row_limit = 100
+min_examined_row_limit = 10000
 log_slow_admin_statements = 1
 log_slow_slave_statements = 1
 server-id = ${2}0
@@ -127,6 +132,7 @@ log_slave_updates
 slave-rows-search-algorithms = 'INDEX_SCAN,HASH_SCAN'
 binlog_format = row
 binlog_checksum = 1
+#relay-log=/data/mysql_$2/$2-relay-bin
 relay_log_recovery = 1
 relay-log-purge = 1
 key_buffer_size = 32M
@@ -143,18 +149,21 @@ innodb_sync_spin_loops = 100
 innodb_spin_wait_delay = 30
 
 transaction_isolation = READ-COMMITTED
-innodb_buffer_pool_size = 100G
+innodb_buffer_pool_size = 200G
 innodb_buffer_pool_instances = 4
 innodb_buffer_pool_load_at_startup = 1
 innodb_buffer_pool_dump_at_shutdown = 1
 innodb_data_file_path = ibdata1:1G:autoextend
-innodb_temp_data_file_path=ibtmp1:12M:autoextend:max:200G
+innodb_temp_data_file_path=ibtmp1:12M:autoextend:max:50G
 innodb_flush_log_at_trx_commit = 1
 innodb_log_buffer_size = 32M
 innodb_log_file_size = 2G
 innodb_log_files_in_group = 2
 innodb_max_undo_log_size = 4G
 innodb_undo_directory = /data/mysql_$2/undolog
+innodb_undo_log_truncate=ON
+innodb_undo_tablespaces=3 
+innodb_purge_rseg_truncate_frequency = 20
 
 # 根据您的服务器IOPS能力适当调整
 # 一般配普通SSD盘的话，可以调整到 10000 - 20000
@@ -163,8 +172,8 @@ innodb_io_capacity = 10000
 innodb_io_capacity_max = 15000
 innodb_flush_sync = 0
 innodb_flush_neighbors = 0
-innodb_write_io_threads = 8
-innodb_read_io_threads = 8
+innodb_write_io_threads = 24
+innodb_read_io_threads = 24
 innodb_purge_threads = 4
 innodb_page_cleaners = 4
 innodb_open_files = 65535
@@ -183,7 +192,7 @@ innodb_stats_on_metadata = 0
 # some var for MySQL 8
 log_error_verbosity = 3
 innodb_print_ddl_logs = 1
-binlog_expire_logs_seconds = 172800
+binlog_expire_logs_seconds = 86400
 #innodb_dedicated_server = 0
 
 innodb_status_file = 1
@@ -210,7 +219,7 @@ innodb_monitor_enable="module_buffer"
 innodb_monitor_enable="module_index"
 innodb_monitor_enable="module_ibuf_system"
 innodb_monitor_enable="module_buffer_page"
-#innodb_monitor_enable="module_adaptive_hash"
+innodb_monitor_enable="module_adaptive_hash"
 
 [mysqldump]
 quick
@@ -235,12 +244,13 @@ chown -R mysql:mysql /data/mysql_$2
 
 #6.启动mysql服务: -sb 覆盖软链接
 echo -e "\033[34;40m 【6.启动mysql服务...】\033[0m"
-ln -sb /usr/local/mysql/bin/mysqld_safe /usr/bin/
-ln -sb /usr/local/mysql/bin/mysql       /usr/bin/
-ln -sb /usr/local/mysql/bin/mysqladmin  /usr/bin/
-ln -sb /usr/local/mysql/bin/mysqld      /usr/bin/
-ln -sb /usr/local/mysql/bin/mysqldump   /usr/bin/
-ln -sb /usr/local/mysql/bin/mysqlbinlog /usr/bin/
+ln -sb /usr/local/mysql/bin/mysqld_safe   /usr/bin/
+ln -sb /usr/local/mysql/bin/mysql         /usr/bin/
+ln -sb /usr/local/mysql/bin/mysqladmin    /usr/bin/
+ln -sb /usr/local/mysql/bin/mysqld        /usr/bin/
+ln -sb /usr/local/mysql/bin/mysqldump     /usr/bin/
+ln -sb /usr/local/mysql/bin/mysqlbinlog   /usr/bin/
+ln -sb /usr/local/mysql/bin/mysqldumpslow /usr/bin/
 
 ### 取出临时密码前把前后的空格删除
 tmp_pwd=$(cat /data/mysql_$2/error.log | grep 'temporary password'|cut -d":" -f5-10|awk '{gsub(/^\s+|\s+$/,"");print}')
