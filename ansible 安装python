@@ -1,0 +1,34 @@
+---
+- hosts: pro
+remote_user: root
+vars:
+
+
+tasks:
+- name: yum install
+yum: name={{item}}
+with_items:
+- zlib-devel
+- bzip2-devel
+- openssl-devel
+- ncurses-devel
+- sqlite-devel
+- readline-devel
+- tk-devel
+
+#拷贝软件
+- name: scp
+copy: src=/data/soft/Python-3.8.0.tgz dest=/data/soft/
+
+- name: untar
+unarchive: src=/data/soft/Python-3.8.0.tgz dest=/data/soft/ copy=no mode=0755
+
+- name: make
+shell: cd /data/soft/Python-3.8.0 && ./configure --prefix=/usr/local/python && make && make install
+
+- name: make2
+shell: ln -s /usr/local/python/bin/python3 /usr/bin/python3
+
+
+- name: make2
+shell: ln -s /usr/local/python/bin/pip3 /usr/bin/pip3
