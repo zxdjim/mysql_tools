@@ -1,0 +1,201 @@
+命名规范
+1.库名、表名、字段名必须使用小写字母，"_"分割。
+
+库名:dev-config 错误 ,      dev_config         可以（中划线错误）
+
+表名:dev_2019-08-08 错误,  dev_2019_08_08     可以（中划线错误）
+
+不要使用``创建不被允许的名字。
+
+ 
+
+2.库名、表名、字段名禁止使用MySQL保留字。
+
+3.库名、表名、字段名见名知意。
+
+4.数据对象、变量的命名都采用英文字符,禁止使用中文命名。
+
+5.临时库、表名必须以tmp为前缀，并以日期为后缀。
+
+tmp_talblename_20191010
+
+6.备份库、表必须以bak为前缀，并以日期为后缀。
+
+bak_tablename_20191010
+
+
+
+基础规范
+1.所有表统一使用InnoDB存储引擎。
+
+2.库和表字符集使用utf8mb4,字符排序选择utf8mb4_0900_as_cs。
+
+3.建表不需要特别指出utf8mb4和utf8mb4_0900_as_cs,数据库已做默认配置。
+
+4.禁止在数据库中存储图片、文件。
+
+5.所有表和列都需要添加注释。
+
+
+
+字段设计规范
+1.每张表必须有整型主键使用id,。
+
+id bigint not null auto_crement 或者 id bigint unsigned not null auto_increment
+
+  不要使用bid,cid,pid,rid,zid做主键,统一使用id
+
+  不要使用业务ID做主键，统一使用id,业务ID可以做唯一键
+
+ 
+
+2.禁止DEFAULT NULL,建议NOT NULL ,设置默认值。
+
+amount int not null default 0
+
+create_time bigint not null default 0
+
+create_user varchar(200)  not null default ''
+
+ 
+
+ 
+
+3. 建议使用UNSIGNED存储非负数值。
+
+id bigint unsigned not null auto_increment
+
+status tinyint unsigned not null default 0
+
+create_time unsigned bigint not null default 0
+
+ unsigned 存储非负数值，正数范围大了1倍
+
+
+
+Type
+
+Storage (Bytes)
+
+Minimum Value Signed
+
+Maximum Value Signed
+
+Minimum Value Unsigned
+
+Maximum Value Unsigned
+
+tinyint
+
+1
+
+-128
+
+127
+
+0
+
+255
+
+smallint
+
+2
+
+
+-32768
+
+ 
+
+32767
+
+0
+
+65535
+
+mediumint
+
+3
+
+-8388608
+
+8388607
+
+0
+
+16777215
+
+int
+
+4
+
+-2147483648
+
+2147483647
+
+0
+
+
+4294967295
+
+ 
+
+bigint
+
+8
+
+-263
+
+263-1
+
+0
+
+264-1
+
+4.不建议使用ENUM类型，使用TINYINT来代替。
+
+5. 禁止在数据库中存储明文密码。
+
+6. 存储状态,性别等,需考虑最大值和最小值,建议使用 unsigned tinyint 或  unsigned smallint。
+
+7. 将过大字段拆分到其他表中。尽可能不使用TEXT、BLOB类型。如果必须使用，业务表中的TEXT,BLOB中字段，必须要拆分到单独的表中存储。
+
+8. 需要根据实际的宽度来选择VARCHAR(N)类型的宽度, N表示的是字符数不是字节数. VARCHAR(N)，N尽可能小，进行排序和创建临时表一类的内存操作时，会使用N的长度申请内存。
+
+ 
+
+10.审计字段建议使用
+
+create_user varchar(200) not null default '',
+
+creaet_time bigint not null default 0,
+
+modify_user varchar(200) not null default '',
+
+modify_time bigint not null default 0,
+
+如果用update_user,update_time建议统一使用modify_user,modify_time。
+
+不要出现这张表modify_user varchar(200),另一张表modify_user varchar(50)
+
+11.时间建议bigint精确到毫秒 或 微妙 东八区 0  表示 1970/1/1 8:0:0
+
+12.金额建议全库统一，开发同仁内部协商。
+
+
+
+重点检查：
+
+1.同一字段在不同表，类型不一致，如user_name 在A表varchar(50),在B表varchar(20)，金钱和时间字段会重点检查。
+2.字段需加 not null 和 default。
+3.表和字段的注释。
+4.如果用到审计字段，建议是以下字段
+create_user varchar(200) not null default '',creaet_time bigint not null default 0,
+modify_user varchar(200) not null default '',modify_time bigint not null default 0,
+
+
+
+creater_userid ,modify_userid也可，总之是要保证统一。
+
+
+名称不一致的，尽量调整。
+
