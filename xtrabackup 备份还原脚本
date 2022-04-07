@@ -1,0 +1,87 @@
+备份脚本参考如下:
+
+
+
+#!/bin/bash
+#author:dba
+
+xtrabackup="/usr/bin/xtrabackup"
+
+#连接信息
+user=root
+passwd="xxxxxx"
+port=6606
+socket=/data/mysql_6606/mysql.sock
+db_conn=" --user=$user --password=$passwd --port=$port --socket=$socket "
+
+#备份目录
+backup_dir=/data/backup/6606 # 备份的主目录
+full_backup_dir=$backup_dir/full/`date +%Y%m%d_%H%M%S` # 全量备份目录
+incr_backup_dir=$backup_dir/incr/`date +%Y%m%d_%H%M%S` # 增量备份目录
+logfile_full=$backup_dir/logs/backup_full.`date +%Y%m%d%H%M%S`.txt # 全量备份日志
+logfile_incr=$backup_dir/logs/backup_incr.`date +%Y%m%d%H%M%S`.txt # 增量备份日志
+backup_txt=$backup_dir/backup.txt #记录备份开始时间和结束时间
+
+#############################################################################
+# 显示错误并退出
+#############################################################################
+error()
+{
+echo "$1" 1>&2
+exit 1
+}
+# 检查执行环境
+if [ ! -x $xtrabackup ]; then
+error "$xtrabackup未安装或未链接到/usr/bin."
+fi
+
+if [ ! -d $backup_dir/full ]; then
+error "备份目标文件夹:$backup_dir/full 不存在."
+fi
+
+if [ ! -d $backup_dir/incr ]; then
+error "备份目标文件夹:$backup_dir/incr 不存在."
+fi
+
+if [ ! -d $backup_dir/logs ]; then
+error "备份日志文件夹:$backup_dir/logs 不存在."
+fi
+
+
+
+echo "备份开始时间:"`date +%Y-%m-%d_%H:%M:%S`>>$backup_txt
+#全量备份
+$xtrabackup $db_conn --use-memory=4G --parallel=4 --no-lock --backup --target-dir=$full_backup_dir >$logfile_full 2>&1
+echo "备份结束时间:"`date +%Y-%m-%d_%H:%M:%S`>>$backup_txt
+
+#删除过期的全量备份
+cd $backup_dir/full
+/usr/bin/find $backup_dir/full -mindepth 1 -maxdepth 1 -type d -mtime +2 -exec rm -rf {} \;
+#删除过期的增量备份
+cd $backup_dir/incr
+/usr/bin/find $backup_dir/incr -mindepth 1 -maxdepth 1 -type d -mtime +2 | xargs rm -rf
+
+
+
+==============================================================================================================
+
+恢复参考:
+
+
+
+1.路径修改
+xtrabackup --defaults-file=/usr/local/mysql/mysql6606.cnf --prepare --target-dir=/db-backup/test_232/backup/6606/full/20200222_150714
+xtrabackup --defaults-file=/usr/local/mysql/mysql6606.cnf --host=localhost --user=root --password=xxxxxx --port=6606 --datadir=/data/mysql_6606 --copy-back --target-dir=/db-backup/test_232/backup/6606/full/20200222_150714
+
+
+
+2.启动前注意修改mybinlog.index文件内容
+
+mysqld_safe --defaults-file=/usr/local/mysql/mysql6606.cnf &
+stop slave;
+reset slave all;
+
+#设置主库IP
+
+change master to master_host='172.18.178.232',master_user='repl',master_port=6606,master_password='xxxxxxxxx',master_auto_position=1;
+start slave;
