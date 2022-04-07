@@ -1,0 +1,291 @@
+mysql安装
+本文mysql数据使用的是mysql8版本。
+#git clone https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.17-el7-x86_64.tar.gz
+#tar -zxvf mysql-8.0.17-el7-x86_64.tar.gz
+#mv mysql-8.0.17-el7-x86_64 mysql
+#cd myql
+#mkdir -p /data/
+#groupadd mysql && useradd -r -g mysql -s /bin/false mysql #vi /usr/local/mysql/mysql.cnf
+
+初始化数据库
+#cd /usr/local/mysql/bin
+#./mysqld --defaults-file=/usr/local/mysql/mysql6626.cnf --initialize
+#查看/data/mysql_6626目录是否有数据文件
+
+修改root密码并启动服务
+#查看初始化密码
+#grep password /data/mysql_6626/error.log
+
+#mysqld_safe --defaults-file=/usr/local/mysql/mysql6626.cnf &
+#mysql_secure_installation
+
+到此数据库就安装完毕了，其他节点也可以根据这个步骤安装，配置文件要根据实际情况做修改。
+
+配置mysql主从模式
+架构：
+master：192.168.120.13 6606
+slave1: 192.168.120.14 6616
+slave2: 192.168.120.15 6626
+注意事项：
+主从服务器操作系统版本和位数一致；
+Master 和 Slave 数据库的版本要一致；
+Master 和 Slave 数据库中的数据要一致；
+Master 开启二进制日志， Master 和 Slave 的 server_id 在局域网内必须唯一
+修改配置文件 在每个节点部署mysql后，要根据架构去修改数据库配置文件 server_id: 必须唯一 bin_log: 二进制日志必须打开
+master：
+#create user repl@'192.168.120.%' identified with mysql_native_password by 'mysql123';
+#grant replication slave on . to repl@'192.168.120.%';
+#flush privileges
+#show master status;
+#mysql> show master status;
++-----------------+----------+--------------+------------------+-------------------------------------------+ | File | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set | +-----------------+----------+--------------+------------------+-------------------------------------------+ | mybinlog.000003 | 195 | | | 34e91deb-32d7-11ea-ae86-000c29350c8b:1-14 | +-----------------+----------+--------------+------------------+-------------------------------------------+
+slave:
+#stop slave;
+#reset slave all;
+#change master to master_host='192.168.120.13',master_port=6606,master_user='repl',master_password="mysql123",master_auto_position = 1; #start slave;
+  mysql> show slave status\G
+  *************************** 1. row ***************************
+              Slave_IO_State: Waiting for master to send event
+                  Master_Host: 192.168.120.13
+                  Master_User: repl
+                  Master_Port: 6606
+                  Connect_Retry: 60
+              Master_Log_File: mybinlog.000003
+          Read_Master_Log_Pos: 195
+              Relay_Log_File: node3-relay-bin.000006
+                  Relay_Log_Pos: 367
+          Relay_Master_Log_File: mybinlog.000003
+              Slave_IO_Running: Yes
+              Slave_SQL_Running: Yes
+              Replicate_Do_DB: 
+          Replicate_Ignore_DB: 
+          Replicate_Do_Table: 
+      Replicate_Ignore_Table: 
+      Replicate_Wild_Do_Table: 
+  Replicate_Wild_Ignore_Table: 
+                  Last_Errno: 0
+                  Last_Error: 
+                  Skip_Counter: 0
+          Exec_Master_Log_Pos: 195
+              Relay_Log_Space: 575
+              Until_Condition: None
+              Until_Log_File: 
+                  Until_Log_Pos: 0
+          Master_SSL_Allowed: No
+          Master_SSL_CA_File: 
+          Master_SSL_CA_Path: 
+              Master_SSL_Cert: 
+              Master_SSL_Cipher: 
+              Master_SSL_Key: 
+          Seconds_Behind_Master: 0
+  Master_SSL_Verify_Server_Cert: No
+                  Last_IO_Errno: 0
+                  Last_IO_Error: 
+              Last_SQL_Errno: 0
+              Last_SQL_Error: 
+  Replicate_Ignore_Server_Ids: 
+              Master_Server_Id: 6606
+                  Master_UUID: 34e91deb-32d7-11ea-ae86-000c29350c8b
+              Master_Info_File: mysql.slave_master_info
+                      SQL_Delay: 0
+          SQL_Remaining_Delay: NULL
+      Slave_SQL_Running_State: Slave has read all relay log; waiting for more updates
+安装MHA+Cetus
+- MHA知识
+  HA（Master High Availability）是一套相对成熟的MySQL高可用方案，能做到在0~30s内自动完成数据库的故障切换操作，在master服务器不宕机的情况下，基本能保证数据的一致性。  
+  
+    1.它由两部分组成：MHA Manager（管理节点）和MHA Node（数据节点）。其中，MHA Manager可以单独部署在一台独立的机器上管理多个master-slave集群，也可以部署在一台slave上。
+MHA Node则运行在每个mysql节点上，MHA Manager会定时探测集群中的master节点，当master出现故障时，它自动将最新数据的slave提升为master，然后将其它所有的slave指向新的master。
+    2.在MHA自动故障切换过程中，MHA试图保存master的二进制日志，从而最大程度地保证数据不丢失，当这并不总是可行的，譬如，主服务器硬件故障或无法通过ssh访问，MHA就没法保存二进制日志，
+这样就只进行了故障转移但丢失了最新数据。可结合MySQL 5.5中推出的半同步复制来降低数据丢失的风险。
+  MHA软件由两部分组成：Manager工具包和Node工具包，具体说明如下：  
+
+    MHA Manager：
+
+    1. masterha_check_ssh：检查MHA的SSH配置状况
+
+    2. masterha_check_repl：检查MySQL的复制状况
+
+    3. masterha_manager：启动MHA
+
+    4. masterha_check_status：检测当前MHA运行状态
+
+    5. masterha_master_monitor：检测master是否宕机
+
+    6. masterha_master_switch：控制故障转移（自动或手动）
+
+    7. masterha_conf_host：添加或删除配置的server信息
+
+    8. masterha_stop：关闭MHA
+   
+    MHA Node:
+
+    save_binary_logs：保存或复制master的二进制日志
+
+    apply_diff_relay_logs：识别差异的relay log并将差异的event应用到其它slave中
+
+    filter_mysqlbinlog：去除不必要的ROLLBACK事件（MHA已不再使用这个工具）
+
+    purge_relay_logs：消除中继日志（不会堵塞SQL线程）
+安装MHA 在MHA服务节点和下面每个master和slave节点中都执行安装yum命令。mha4mysql-node-0.58-0.el7.centos.noarch.rpm要在每个节点中安装，mha4mysql-manager-0.58-0.el7.centos.noarch.rpm要在mha的管理节点安装
+
+#yum install -y perl perl-DBI perl-DBD-MySQL perl-IO-Socket-SSL perl-Time-HiRes perl-ExtUtils-CBuilder perl-ExtUtils-MakeMaker perl-CPAN
+#yum install -y perl-Config-Tiny perl-Log-Dispatch perl-Parallel-ForkManager perl-Config-IniFiles
+#yum install -y mha4mysql-manager-0.58-0.el7.centos.noarch.rpm mha4mysql-node-0.58-0.el7.centos.noarch.rpm
+#mkdir -p /data/masterha/{bss,rcs,osmc}
+在集群的master和slave节点中，配置无密码登陆，确保在任何一个节点都可以登陆其他节点(下面的SSH命令要在集群中每台机器都要执行,确保都可以互相免密登录)。
+#ssh-keygen -t rsa
+#ssh-copy-id -i /root/.ssh/id_rsa.pub root@192.168.120.3
+#ssh-copy-id -i /root/.ssh/id_rsa.pub root@192.168.120.13
+#ssh-copy-id -i /root/.ssh/id_rsa.pub root@192.168.120.14
+#ssh-copy-id -i /root/.ssh/id_rsa.pub root@192.168.120.15
+创建配置文件 vim /data/masterha/bss/bss.cnf
+
+  [server default]
+  user=mhaty #此处为mha的监控mysql的用户，需要在数据库中创建
+  password="uqnFBzTpmhg4wF3ay1bvQ5o" #用户的密码
+  proxy_conf=/data/masterha/bss/bss_cetus.cnf
+  manager_workdir=/data/masterha
+  manager_log=/data/masterha/bss/bss.log
+  remote_workdir=/tmp
+  ssh_user=root
+  ssh_port=22
+  repl_user=repl #主从复制的账号和密码
+  repl_password="aaaa" 
+  ping_interval=1
+  report_script=""
+  #此处为配置脚本执行时的参数，主要是主从的信息
+  secondary_check_script=/usr/bin/masterha_secondary_check -s 172.18.178.228 -s 172.18.178.230 --user=root --master_host=172.18.178.226 --master_port=6606 
+  shutdown_script=""
+  master_ip_failover_script=""
+  #以下是配置主从复制的集群信息
+  [server_226]
+  hostname=172.18.178.226
+  master_binlog_dir=/data/mysql_6606
+  port=6606
+
+  [server_228]
+  hostname=172.18.178.228
+  master_binlog_dir=/data/mysql_6616
+  port=6616
+  candidate_master=1
+  check_repl_delay=0
+
+  [server_230]
+  hostname=172.18.178.230
+  master_binlog_dir=/data/mysql_6626
+  port=6626
+配置mha连接cetus文件 cat bss/bss_cetus.cnf
+
+middle_ipport=192.168.120.3:9606
+middle_user=admin
+middle_pass=admin
+部署cetus
+
+#git clone https://github.com/cetus-tools/cetus.git  
+#cd cetus  
+#mkdir build && cd build  
+#CFLAGS='-g -Wpointer-to-int-cast' cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local/cetus -DSIMPLE_PARSER=ON
+#make install
+#vi cetus/conf/proxy.conf
+
+[cetus]
+  verbose-shutdown=true
+  daemon=true
+  basedir=/data/cetus
+  conf-dir=/data/cetus/conf
+  pid-file=/data/cetus/cetus.pid
+  plugin-dir=/data/cetus/lib/cetus/plugins
+  plugins=proxy,admin
+  log-level=debug
+  log-file=/data/cetus/logs/cetus.log
+  max-open-files=65536
+  default-charset=utf8mb4
+  #此处表示连接数据库的用户
+  default-username=root
+  #此处表示连接数据库的默认库，此处必须填写并且必须存在的库
+  default-db=test
+  ifname=eth0
+  default-pool-size=100
+  worker-processes=2
+  max-resp-size=36485760
+  ssl=false
+  slave-delay-down=100.000000
+  slave-delay-recover=5.000000
+  long-query-time=100
+  enable-tcp-stream=true
+  enable-fast-stream=true
+  sql-log-bufsize=10485760
+  sql-log-switch=OFF
+  sql-log-prefix=cetus
+  sql-log-path=/data/cetus/logs
+  sql-log-maxsize=1024
+  sql-log-mode=BACKEND
+  #cetus监听的连接端口
+  proxy-address=0.0.0.0:3606
+  #后端slave的数据库
+  proxy-read-only-backend-addresses=192.168.120.15:6616,192.168.120.14:6626
+  #后端master的数据库
+  proxy-backend-addresses=192.168.120.13:6606
+  #cetus管理接口
+  admin-address=0.0.0.0:9606
+  #登陆管理接口的用户名和密码
+  admin-username=admin
+  admin-password=admin
+#vi cetus/users.json
+
+#users.json用来配置用户登陆信息，采用键值对的结构，其中键是固定的，值是用户在MySQL创建的登陆用户名和密码。其中user的值是用户名；client_pwd的值是前端登录Cetus的密码;server_pwd的值是Cetus登录后端的密码。
+{
+  "users":	[{
+  		"user":	"root",
+  		"client_pwd":	"cetus_app",
+  		"server_pwd":	"mysql123"
+  	}, {
+  		"user":	"test",
+  		"client_pwd":	"cetus_app1",
+  		"server_pwd":	"mysql123"
+  	}]
+} 
+1.cetus文件替换MHA文件(mha_ld 此目录存放于cetus编译前的源目录中)
+使用 mha_ld/src 替换所有文件/usr/share/perl5/vendor_perl/MHA/目录的所有同名文件(需要全部删除后重新拷入)
+使用 mha_ld/masterha_secondary_check替换masterha_secondary_check    命令 which masterha_secondary_check
+#yes|cp mha_ld/masterha_secondary_check /usr/bin/masterha_secondary_check
+#yes|cp mha_ld/src/*  /usr/share/perl5/vendor_perl/MHA/ && cd /usr/bin/   
+# 以上通过管道 yes 覆盖 cp后的多个同名文件
+上传修改后的masterha_secondary_check
+#chmod +x /usr/bin/masterha_secondary_check
+2.检查mha和mysql集群的连通性
+manager节点检查ssh连通性
+#masterha_check_ssh --conf=/data/masterha/bss/bss.cnf
+manager节点检查主从复制状态
+#masterha_check_repl --conf=/data/masterha/bss/bss.cnf
+
+启动mha和cetus
+启动mha(最好做成一个SH脚本)
+#nohup masterha_manager --conf=/data/masterha/bss/bss.cnf --ignore_last_failover &
+启动cetus
+bin/cetus --defaults-file=conf/proxy.conf &
+
+测试cetus
+#mysql -h127.0.0.1 -uadmin -padmin -P9606
+
+  +-------+-------------+---------------------+---------+------+-----------------+------------+------------+-------------+
+  | PID   | backend_ndx | address             | state   | type | slave delay(ms) | idle_conns | used_conns | total_conns |
+  +-------+-------------+---------------------+---------+------+-----------------+------------+------------+-------------+
+  | 29030 | 1           | 192.168.120.13:6606 | up      | rw   | NULL            | 100        | 0          | 100         |
+  | 29030 | 2           | 192.168.120.15:6616 | unknown | ro   | 0               | 100        | 0          | 100         |
+  | 29030 | 3           | 192.168.120.14:6626 | unknown | ro   | 0               | 100        | 0          | 100         |
+#mysql -h192.168.120.3 -u root -pcetus_app -P 3606
+
+MySQL [(none)]> show databases;    
+  +--------------------+
+  | Database           |
+  +--------------------+
+  | information_schema |
+  | mysql              |
+  | performance_schema |
+  | sys                |
+  | test               |
+  | test1              |
+  +--------------------+
+  6 rows in set (0.00 sec)
