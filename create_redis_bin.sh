@@ -4,9 +4,9 @@
 ## $1 端口号 比如 7000等
 ## $2 版本号 比如 5.0.6/6.2.0等
 ## $3 0:非持久化 1:混合持久化(AOF和RDB模式)
-##demo  sh create_redis_bin 7000 5.0.6 1
+##demo  sh create_redis_bin.sh 7000 5.0.6 1
 
-passwd="xxxyACXV!@123"
+passwd="yD1fVziT4svT4rtKzuN1"
 
 if [ $# != 3 ]; then
    echo -e "\033[34;40m 传入的参数必须是3个,请检查后重试!!!\033[0m"
@@ -95,9 +95,9 @@ repl-diskless-sync no
 repl-diskless-sync-delay 5
 repl-disable-tcp-nodelay no
 replica-priority 100
-lazyfree-lazy-eviction no
-lazyfree-lazy-expire no
-lazyfree-lazy-server-del no
+#lazyfree-lazy-eviction no
+#lazyfree-lazy-expire no
+#lazyfree-lazy-server-del no
 replica-lazy-flush no
 ## appendfsync值为:always(性能最糟),no(性能最好,从不同步),everysec(最多每秒调用一次fsync)
 appendfsync everysec
@@ -112,6 +112,12 @@ cluster-config-file "nodes-${1}.conf"
 cluster-node-timeout 50000
 slowlog-log-slower-than 10000
 slowlog-max-len 128
+#### maxmemory(10G) 惰性删除过期keys  allkeys-lru：淘汰整个键值中最久未使用的键值
+maxmemory 10737418240
+maxmemory-policy allkeys-lru
+lazyfree-lazy-eviction yes
+lazyfree-lazy-expire yes
+lazyfree-lazy-server-del yes
 latency-monitor-threshold 0
 notify-keyspace-events ""
 hash-max-ziplist-entries 512
@@ -152,4 +158,4 @@ fi
 echo -e "\033[34;40m 【7.启动redis完成,脚本结束】\033[0m"
 
 #8.最后所有节点安装好后创建集群
-#redis-cli --cluster create 10.105.11.4:7000 10.105.11.4:7001 10.105.11.5:7000 10.105.11.5:7001 10.105.11.6:7000 10.105.11.6:7001 -a xxxyACXV!@123 --cluster-replicas 1
+#redis-cli --cluster create 10.105.11.4:7000 10.105.11.4:7001 10.105.11.5:7000 10.105.11.5:7001 10.105.11.6:7000 10.105.11.6:7001 -a yD1fVziT4svT4rtKzuN1 --cluster-replicas 1
