@@ -103,7 +103,7 @@ replica-lazy-flush no
 appendfsync everysec
 no-appendfsync-on-rewrite no
 auto-aof-rewrite-percentage 100
-auto-aof-rewrite-min-size 256mb
+auto-aof-rewrite-min-size 4gb
 aof-load-truncated yes
 aof-use-rdb-preamble yes
 lua-time-limit 5000
@@ -134,7 +134,7 @@ activerehashing yes
 client-output-buffer-limit normal 0 0 0
 client-output-buffer-limit replica 1024mb 256mb 300
 client-output-buffer-limit pubsub 1024mb 128mb 300
-hz 10
+hz 50
 dynamic-hz yes
 aof-rewrite-incremental-fsync yes
 rdb-save-incremental-fsync yes
