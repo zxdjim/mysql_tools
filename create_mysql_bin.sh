@@ -21,11 +21,9 @@ if [ ! -d /usr/local/mysql ]; then
 #1.文件下载
 echo -e "\033[34;40m 【1.文件下载...】\033[0m"
 mkdir -p /data/soft && cd /data/soft
-wget --no-check-certificate https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-$1-el7-x86_64.tar.gz
 
 if [[ ! -e mysql-$1-el7-x86_64.tar.gz ]]; then
-  echo "mysql-$1-el7-x86_64.tar.gz 文件不存在,请上传此文件或下载"
-  exit 1
+  wget --no-check-certificate https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-$1-el7-x86_64.tar.gz
 fi
 
 #2.解压移动及创建目录
@@ -88,8 +86,10 @@ gtid-mode=on
 enforce-gtid-consistency=on
 log-slave-updates=on
 slave-parallel-type=LOGICAL_CLOCK
-slave-parallel-workers=8
+slave-parallel-workers=12
 log_bin_trust_function_creators=1
+##1032行找不到的错误,1062主键冲突的错误,all(这是跳过所有报错)
+#slave-skip-errors=1032,1062
 ###################关闭binlog
 #skip-log-bin
 
@@ -149,11 +149,12 @@ innodb_sync_spin_loops = 100
 innodb_spin_wait_delay = 30
 
 transaction_isolation = READ-COMMITTED
-innodb_buffer_pool_size = 100G
-innodb_buffer_pool_instances = 4
+innodb_buffer_pool_size = 200G
+innodb_buffer_pool_instances = 48
 innodb_buffer_pool_load_at_startup = 1
 innodb_buffer_pool_dump_at_shutdown = 1
 innodb_data_file_path = ibdata1:1G:autoextend
+tmpdir = /data/mysql_$2/tmp
 innodb_temp_data_file_path=ibtmp1:12M:autoextend:max:50G
 innodb_flush_log_at_trx_commit = 1
 innodb_log_buffer_size = 32M
@@ -162,7 +163,7 @@ innodb_log_files_in_group = 2
 innodb_max_undo_log_size = 4G
 innodb_undo_directory = /data/mysql_$2/undolog
 innodb_undo_log_truncate=ON
-innodb_undo_tablespaces=3 
+innodb_undo_tablespaces=2
 innodb_purge_rseg_truncate_frequency = 20
 
 # 根据您的服务器IOPS能力适当调整
@@ -181,13 +182,12 @@ innodb_max_dirty_pages_pct = 75
 innodb_flush_method = O_DIRECT
 innodb_lru_scan_depth = 4000
 innodb_checksum_algorithm = crc32
-innodb_lock_wait_timeout = 10
+innodb_lock_wait_timeout = 200
 innodb_rollback_on_timeout = 1
 innodb_print_all_deadlocks = 1
 innodb_file_per_table = 1
 innodb_online_alter_log_max_size = 4G
 innodb_stats_on_metadata = 0
-
 
 # some var for MySQL 8
 log_error_verbosity = 3
