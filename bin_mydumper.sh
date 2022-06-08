@@ -31,7 +31,7 @@ ln -sb /usr/local/bin/myloader /usr/bin/myloader
 
 # 部分参数说明
 # -B, --database 需要备份的库
-# -T, --tables-list 需要备份的表，用，分隔
+# -T, --tables-list 需要备份的表，用,分隔
 # -t, --threads 使用的线程数量，默认4 
 # -o, --outputdir 输出目录
 # -l, --long-query-guard 长查询，默认60s
@@ -48,8 +48,10 @@ ln -sb /usr/local/bin/myloader /usr/bin/myloader
 # -t：指定线程的数量。
 # --trx-consistency-only：如果只使用事务表，例如InnoDB，那么使用此选项将使锁定最小化
 # -d, --no-data  Do not dump table dat
-# -R(存储过程)   -E(定时器)
+# -R(存储过程)   -E(定时器) -G, --triggers
 
-# mydumper -u dba -p dba@123 -h 127.0.0.1 -P 6636 -t 10 -F 128  -l 7200 --skip-tz-utc --kill-long-queries --trx-consistency-only -v 3 \
-# -G -E -R --regex '^(?!(mysql|sys|information_schema|performance_schema|METRICS_SCHEMA|proxy_heart_beat|test))' -o /data/bak
-# myloader -u dba -p dba@123 -h 127.0.0.1 -P 6636 -t 10 -v 3 -B tybss_report -d /data/bak
+## myloader 参数 -e 为开启binlog,否则默认导入是不启用binlog的
+
+# mydumper -u dba -p dba@123 -h 127.0.0.1 -P 6636 -t 10 -F 32  -l 7200 --skip-tz-utc --kill-long-queries --trx-consistency-only -v 3 \
+# --regex '^(?!(mysql|sys|information_schema|performance_schema|METRICS_SCHEMA|proxy_heart_beat|test))' -o /data/bak
+# myloader -u dba -p dba@123 -h 127.0.0.1 -P 6636 -t 10 -v 3 -e -B tybss_report -d /data/bak
