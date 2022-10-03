@@ -246,19 +246,18 @@ middle_pass=admin
   		"server_pwd":	"mysql123"
   	}]
 } 
-1.cetus文件替换MHA文件(mha_ld 此目录存放于cetus编译前的源目录中)
+1.cetus文件替换MHA文件(mha_ld 此目录存放于cetus编译前的源目录中,此项不操作会报异常:
+  Parameter name proxy_conf is invalid! at /usr/share/perl5/vendor_perl/MHA/SSHCheck.pm line 148)  --manager节点操作
 使用 mha_ld/src 替换所有文件/usr/share/perl5/vendor_perl/MHA/目录的所有同名文件(需要全部删除后重新拷入)
 使用 mha_ld/masterha_secondary_check替换masterha_secondary_check    命令 which masterha_secondary_check
-#yes|cp mha_ld/masterha_secondary_check /usr/bin/masterha_secondary_check
-#yes|cp mha_ld/src/*  /usr/share/perl5/vendor_perl/MHA/ && cd /usr/bin/   
-# 以上通过管道 yes 覆盖 cp后的多个同名文件
-上传修改后的masterha_secondary_check
-#chmod +x /usr/bin/masterha_secondary_check
-2.检查mha和mysql集群的连通性
+yes|cp mha_ld/masterha_secondary_check /usr/bin/masterha_secondary_check
+yes|cp mha_ld/src/*  /usr/share/perl5/vendor_perl/MHA/
+chmod +x /usr/bin/masterha_secondary_check
+2.检查mha和mysql集群的连通性(--manager节点操作)
 manager节点检查ssh连通性
-#masterha_check_ssh --conf=/data/masterha/bss/bss.cnf
+masterha_check_ssh --conf=/data/masterha/bss/bss.cnf
 manager节点检查主从复制状态
-#masterha_check_repl --conf=/data/masterha/bss/bss.cnf
+masterha_check_repl --conf=/data/masterha/bss/bss.cnf
 
 启动mha和cetus
 启动mha(最好做成一个SH脚本)
