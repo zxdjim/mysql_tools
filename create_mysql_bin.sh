@@ -92,8 +92,10 @@ log_bin_trust_function_creators=1
 #slave-skip-errors=1032,1062
 ###################关闭binlog
 #skip-log-bin
+################# 跳过权限验证
+#skip-grant-tables
 
-open_files_limit    = 65535
+open_files_limit = 65535
 back_log = 1024
 max_connections = 20000
 max_connect_errors = 1000000
@@ -108,8 +110,8 @@ join_buffer_size = 4M
 thread_cache_size = 768
 interactive_timeout = 28800
 wait_timeout = 28800
-tmp_table_size = 2G
-max_heap_table_size = 2G
+tmp_table_size = 10G
+max_heap_table_size = 10G
 slow_query_log = 1
 log_timestamps = SYSTEM
 slow_query_log_file = /data/mysql_$2/slow.log
@@ -132,7 +134,7 @@ log_slave_updates
 slave-rows-search-algorithms = 'INDEX_SCAN,HASH_SCAN'
 binlog_format = row
 binlog_checksum = 1
-#relay-log=/data/mysql_$2/$2-relay-bin
+relay-log=/data/mysql_$2/$2-relay-bin
 relay_log_recovery = 1
 relay-log-purge = 1
 key_buffer_size = 32M
@@ -150,20 +152,21 @@ innodb_spin_wait_delay = 30
 
 transaction_isolation = READ-COMMITTED
 innodb_buffer_pool_size = 200G
-innodb_buffer_pool_instances = 48
+innodb_buffer_pool_instances = 32
 innodb_buffer_pool_load_at_startup = 1
 innodb_buffer_pool_dump_at_shutdown = 1
 innodb_data_file_path = ibdata1:1G:autoextend
-tmpdir = /data/mysql_$2/tmp
 innodb_temp_data_file_path=ibtmp1:12M:autoextend:max:50G
+## 默认值(但可能受限于/根目录容量大小) tmpdir = /tmp
+tmpdir = /data/mysql_$2
 innodb_flush_log_at_trx_commit = 1
 innodb_log_buffer_size = 32M
 innodb_log_file_size = 2G
 innodb_log_files_in_group = 2
-innodb_max_undo_log_size = 4G
+innodb_max_undo_log_size = 2G
 innodb_undo_directory = /data/mysql_$2/undolog
 innodb_undo_log_truncate=ON
-innodb_undo_tablespaces=2
+innodb_undo_tablespaces=3
 innodb_purge_rseg_truncate_frequency = 20
 
 # 根据您的服务器IOPS能力适当调整
@@ -173,8 +176,8 @@ innodb_io_capacity = 10000
 innodb_io_capacity_max = 15000
 innodb_flush_sync = 0
 innodb_flush_neighbors = 0
-innodb_write_io_threads = 48
-innodb_read_io_threads = 48
+innodb_write_io_threads = 24
+innodb_read_io_threads = 24
 innodb_purge_threads = 4
 innodb_page_cleaners = 4
 innodb_open_files = 65535
@@ -213,6 +216,7 @@ innodb_monitor_enable="module_ddl"
 innodb_monitor_enable="module_trx"
 innodb_monitor_enable="module_os"
 innodb_monitor_enable="module_purge"
+innodb_monitor_enable="module_undo"
 innodb_monitor_enable="module_log"
 innodb_monitor_enable="module_lock"
 innodb_monitor_enable="module_buffer"
