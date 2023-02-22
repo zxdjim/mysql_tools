@@ -6,7 +6,7 @@
 ##      $4类型后的n值
 
 v_redis="/usr/bin/redis-cli"
-token="yD1fVziT4svT4rtKzuN1"
+token="xxxyyyy"
 ip=${1%:*}
 port=${1#*:}
 v_info="client list"
