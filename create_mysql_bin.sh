@@ -31,7 +31,6 @@ echo -e "\033[34;40m 【2.解压移动及创建目录...】\033[0m"
 tar -zxvf mysql-$1-el7-x86_64.tar.gz
 mv ./mysql-$1-el7-x86_64 /usr/local/mysql
 
-
 #3.创建数据库用户：
 echo -e "\033[34;40m 【3.创建数据库用户...】\033[0m"
 groupadd mysql
@@ -64,8 +63,9 @@ character-set-server = utf8mb4
 
 collation-server = utf8mb4_0900_as_cs
 #collation-server = utf8mb4_bin
+## 是否禁止解析主机名,0-否,1-是(建议启用)
 skip_name_resolve = 1
-#
+
 default-authentication-plugin=mysql_native_password
 #是否不区分大小写(0:否 1:是)
 lower-case-table-names = 1
@@ -75,9 +75,10 @@ default-time-zone='+8:00'
 
 range_optimizer_max_mem_size=0
 innodb_adaptive_hash_index=0
+innodb_adaptive_hash_index_parts=32
 innodb_status_output=0
 information_schema_stats_expiry=0
-event_scheduler=1
+event_scheduler=0
 ## 不限制mysqld在任意目录的导入导出
 secure_file_priv=''
 #############主从复制
@@ -86,14 +87,10 @@ gtid-mode=on
 enforce-gtid-consistency=on
 log-slave-updates=on
 slave-parallel-type=LOGICAL_CLOCK
-slave-parallel-workers=12
+slave-parallel-workers=32
 log_bin_trust_function_creators=1
 ##1032行找不到的错误,1062主键冲突的错误,all(这是跳过所有报错)
-#slave-skip-errors=1032,1062
-###################关闭binlog
-#skip-log-bin
-################# 跳过权限验证
-#skip-grant-tables
+slave-skip-errors=1032,1062
 
 open_files_limit = 65535
 back_log = 1024
@@ -112,11 +109,14 @@ interactive_timeout = 28800
 wait_timeout = 28800
 tmp_table_size = 10G
 max_heap_table_size = 10G
+
+### 慢查询开启 1/0,时间秒数和慢查询路径
 slow_query_log = 1
-log_timestamps = SYSTEM
+long_query_time = 3
 slow_query_log_file = /data/mysql_$2/slow.log
+
+log_timestamps = SYSTEM
 log-error = /data/mysql_$2/error.log
-long_query_time = 2
 log_queries_not_using_indexes =1
 log_throttle_queries_not_using_indexes = 60
 min_examined_row_limit = 10000
@@ -124,7 +124,7 @@ log_slow_admin_statements = 1
 log_slow_slave_statements = 1
 server-id = ${2}0
 log-bin = /data/mysql_$2/mybinlog
-sync_binlog = 1
+
 binlog_cache_size = 4M
 max_binlog_cache_size = 2G
 max_binlog_size = 1G
@@ -156,18 +156,24 @@ innodb_buffer_pool_instances = 32
 innodb_buffer_pool_load_at_startup = 1
 innodb_buffer_pool_dump_at_shutdown = 1
 innodb_data_file_path = ibdata1:1G:autoextend
-innodb_temp_data_file_path=ibtmp1:12M:autoextend:max:50G
+innodb_temp_data_file_path=ibtmp1:12M:autoextend:max:200G
 ## 默认值(但可能受限于/根目录容量大小) tmpdir = /tmp
 tmpdir = /data/mysql_$2
+
+## 1&1 适合数据安全性要求非常高，而且磁盘写入能力足够支持业务
+## 0&0 磁盘写能力有限，无复制或允许复制延迟较长
+sync_binlog = 1
 innodb_flush_log_at_trx_commit = 1
+
 innodb_log_buffer_size = 32M
-innodb_log_file_size = 2G
-innodb_log_files_in_group = 2
-innodb_max_undo_log_size = 2G
+innodb_log_file_size = 4G
+innodb_log_files_in_group = 4
+innodb_max_undo_log_size = 4G
 innodb_undo_directory = /data/mysql_$2/undolog
 innodb_undo_log_truncate=ON
-innodb_undo_tablespaces=3
+innodb_undo_tablespaces=8
 innodb_purge_rseg_truncate_frequency = 20
+innodb_autoinc_lock_mode=2
 
 # 根据您的服务器IOPS能力适当调整
 # 一般配普通SSD盘的话，可以调整到 10000 - 20000
@@ -185,7 +191,7 @@ innodb_max_dirty_pages_pct = 75
 innodb_flush_method = O_DIRECT
 innodb_lru_scan_depth = 4000
 innodb_checksum_algorithm = crc32
-innodb_lock_wait_timeout = 200
+innodb_lock_wait_timeout = 500
 innodb_rollback_on_timeout = 1
 innodb_print_all_deadlocks = 1
 innodb_file_per_table = 1
@@ -195,7 +201,7 @@ innodb_stats_on_metadata = 0
 # some var for MySQL 8
 log_error_verbosity = 3
 innodb_print_ddl_logs = 1
-binlog_expire_logs_seconds = 86400
+binlog_expire_logs_seconds = 259200
 #innodb_dedicated_server = 0
 
 innodb_status_file = 1
@@ -209,21 +215,27 @@ performance_schema_instrument = '%memory%=on'
 performance_schema_instrument = '%lock%=on'
 
 #innodb monitor
-innodb_monitor_enable="module_innodb"
-innodb_monitor_enable="module_server"
-innodb_monitor_enable="module_dml"
-innodb_monitor_enable="module_ddl"
-innodb_monitor_enable="module_trx"
-innodb_monitor_enable="module_os"
-innodb_monitor_enable="module_purge"
-innodb_monitor_enable="module_undo"
-innodb_monitor_enable="module_log"
-innodb_monitor_enable="module_lock"
-innodb_monitor_enable="module_buffer"
-innodb_monitor_enable="module_index"
-innodb_monitor_enable="module_ibuf_system"
-innodb_monitor_enable="module_buffer_page"
-innodb_monitor_enable="module_adaptive_hash"
+innodb_monitor_enable=module_innodb,module_server,module_dml,module_ddl,module_trx,module_os,module_purge,module_undo,module_log,module_lock,module_buffer,module_index,module_ibuf_system,module_buffer_page,module_adaptive_hash
+#innodb_monitor_enable="module_innodb"
+#innodb_monitor_enable="module_server"
+#innodb_monitor_enable="module_dml"
+#innodb_monitor_enable="module_ddl"
+#innodb_monitor_enable="module_trx"
+#innodb_monitor_enable="module_os"
+#innodb_monitor_enable="module_purge"
+#innodb_monitor_enable="module_undo"
+#innodb_monitor_enable="module_log"
+#innodb_monitor_enable="module_lock"
+#innodb_monitor_enable="module_buffer"
+#innodb_monitor_enable="module_index"
+#innodb_monitor_enable="module_ibuf_system"
+#innodb_monitor_enable="module_buffer_page"
+#innodb_monitor_enable="module_adaptive_hash"
+
+###################关闭binlog要放在最后防止被覆盖
+#skip-log-bin
+################# 跳过权限验证
+#skip-grant-tables
 
 [mysqldump]
 quick
@@ -238,7 +250,7 @@ mkdir -p /data/mysql_$2
 lb=$(rpm -qa|grep libaio)
 if [ ! "$lb" ]; then
   yum install -y libaio
-fi 
+fi
 #5.初始化数据库:
 echo -e "\033[34;40m 【5.初始化数据库...】\033[0m"
 cd /usr/local/mysql/bin
@@ -257,7 +269,7 @@ ln -sb /usr/local/mysql/bin/mysqlbinlog   /usr/bin/
 ln -sb /usr/local/mysql/bin/mysqldumpslow /usr/bin/
 
 ### 取出临时密码前把前后的空格删除
-tmp_pwd=$(cat /data/mysql_$2/error.log | grep 'temporary password'|cut -d":" -f5-10|awk '{gsub(/^\s+|\s+$/,"");print}')
+tmp_pwd=$(cat /data/mysql_$2/error.log | grep -i 'temporary password'|cut -d":" -f5-10|awk '{gsub(/^\s+|\s+$/,"");print}')
 nohup mysqld_safe --defaults-file=/usr/local/mysql/mysql$2.cnf 2>/dev/null &
 
 echo "请进入mysql后马上修改临时密码,其值为${tmp_pwd}"
