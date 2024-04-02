@@ -6,7 +6,7 @@
 ## $3 0:非持久化 1:混合持久化(AOF和RDB模式)
 ##demo  sh create_redis_bin.sh 7000 5.0.6 1
 
-passwd="yD1fVziT4svT4rtKzuN1"
+passwd="xxxxxN1"
 
 if [ $# != 3 ]; then
    echo -e "\033[34;40m 传入的参数必须是3个,请检查后重试!!!\033[0m"
@@ -138,7 +138,7 @@ hz 50
 dynamic-hz yes
 aof-rewrite-incremental-fsync yes
 rdb-save-incremental-fsync yes
-maxclients 60000
+maxclients 100000
 masterauth "${passwd}"
 requirepass "${passwd}"
 rename-command FLUSHALL ""
